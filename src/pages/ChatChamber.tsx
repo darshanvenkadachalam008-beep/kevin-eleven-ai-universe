@@ -183,7 +183,7 @@ const ChatChamber = () => {
                   : 'bg-secondary/15 border border-secondary/25 text-foreground'
               }`}
             >
-              <ReactMarkdown className="prose prose-invert prose-sm max-w-none [&>p]:m-0">{msg.content}</ReactMarkdown>
+              <ReactMarkdown components={{ p: ({ children }) => <p className="m-0">{children}</p> }}>{msg.content}</ReactMarkdown>
               {msg.role === 'assistant' && (
                 <button onClick={() => speak(msg.content)} className="mt-2 text-muted-foreground hover:text-primary transition-colors">
                   <Volume2 className="w-3 h-3" />
