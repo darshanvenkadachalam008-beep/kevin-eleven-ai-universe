@@ -1,1 +1,7 @@
 project_id = "wahnpkynqzpdzbfevxup"
+
+[functions.chat]
+verify_jwt = false
+
+[functions.generate-personality]
+verify_jwt = false
