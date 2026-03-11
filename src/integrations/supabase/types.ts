@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      character_events: {
+        Row: {
+          character_id: string
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_events_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_interactions: {
+        Row: {
+          character_a_id: string
+          character_b_id: string
+          content: string
+          created_at: string
+          id: string
+          interaction_type: string
+        }
+        Insert: {
+          character_a_id: string
+          character_b_id: string
+          content: string
+          created_at?: string
+          id?: string
+          interaction_type?: string
+        }
+        Update: {
+          character_a_id?: string
+          character_b_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          interaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_interactions_character_a_id_fkey"
+            columns: ["character_a_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "character_interactions_character_b_id_fkey"
+            columns: ["character_b_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      character_memory: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          memory_key: string
+          memory_value: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          memory_key: string
+          memory_value: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          memory_key?: string
+          memory_value?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "character_memory_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           avatar: string | null
@@ -146,6 +261,120 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      ratings: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relationships: {
+        Row: {
+          character_id: string
+          created_at: string
+          id: string
+          interaction_count: number
+          level: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          level?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          id?: string
+          interaction_count?: number
+          level?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relationships_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      story_sessions: {
+        Row: {
+          character_id: string
+          created_at: string
+          genre: string
+          id: string
+          is_active: boolean
+          story_state: Json
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          character_id: string
+          created_at?: string
+          genre?: string
+          id?: string
+          is_active?: boolean
+          story_state?: Json
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          character_id?: string
+          created_at?: string
+          genre?: string
+          id?: string
+          is_active?: boolean
+          story_state?: Json
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "story_sessions_character_id_fkey"
+            columns: ["character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
