@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
+import ConfigGuard from "@/components/ConfigGuard";
 import { lazy, Suspense } from "react";
 
 const Index = lazy(() => import("./pages/Index"));
@@ -13,6 +14,8 @@ const ChatChamber = lazy(() => import("./pages/ChatChamber"));
 const CreationLab = lazy(() => import("./pages/CreationLab"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Auth = lazy(() => import("./pages/Auth"));
+const StoryAdventure = lazy(() => import("./pages/StoryAdventure"));
+const UniverseFeed = lazy(() => import("./pages/UniverseFeed"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -30,6 +33,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ConfigGuard />
           <Navbar />
           <Suspense fallback={<Loading />}>
             <Routes>
@@ -39,6 +43,8 @@ const App = () => (
               <Route path="/creation-lab" element={<CreationLab />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/story-adventure" element={<StoryAdventure />} />
+              <Route path="/universe-feed" element={<UniverseFeed />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
