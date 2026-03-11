@@ -3,9 +3,10 @@ import { useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { streamChat } from '@/lib/chatStream';
+import { streamOllamaChat, isOllamaAvailable } from '@/lib/ollamaChat';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { Send, Mic, MicOff, Volume2 } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles } from 'lucide-react';
 
 interface ChatMsg {
   role: 'user' | 'assistant';
@@ -22,6 +23,13 @@ interface CharacterData {
   color: string | null;
 }
 
+const relationshipLabels: Record<string, { label: string; icon: typeof Heart; color: string }> = {
+  stranger: { label: 'STRANGER', icon: Users, color: '#666' },
+  friend: { label: 'FRIEND', icon: Heart, color: '#00f0ff' },
+  companion: { label: 'COMPANION', icon: Shield, color: '#8b5cf6' },
+  trusted_ally: { label: 'TRUSTED ALLY', icon: Sparkles, color: '#ffcc00' },
+};
+
 const ChatChamber = () => {
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
@@ -32,6 +40,8 @@ const ChatChamber = () => {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [relationship, setRelationship] = useState<string>('stranger');
+  const [interactionCount, setInteractionCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -53,6 +63,19 @@ const ChatChamber = () => {
       });
   }, [user, characterId]);
 
+  // Load relationship
+  useEffect(() => {
+    if (!user || !characterId) return;
+    supabase.from('relationships').select('level, interaction_count')
+      .eq('user_id', user.id).eq('character_id', characterId).maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setRelationship(data.level);
+          setInteractionCount(data.interaction_count);
+        }
+      });
+  }, [user, characterId]);
+
   // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -61,6 +84,29 @@ const ChatChamber = () => {
   const saveMessage = async (role: string, content: string) => {
     if (!user || !characterId) return;
     await supabase.from('messages').insert({ user_id: user.id, character_id: characterId, role, message: content });
+  };
+
+  const updateRelationship = async () => {
+    if (!user || !characterId) return;
+    const newCount = interactionCount + 1;
+    setInteractionCount(newCount);
+
+    let newLevel = 'stranger';
+    if (newCount >= 50) newLevel = 'trusted_ally';
+    else if (newCount >= 20) newLevel = 'companion';
+    else if (newCount >= 5) newLevel = 'friend';
+
+    setRelationship(newLevel);
+
+    const { data: existing } = await supabase.from('relationships')
+      .select('id').eq('user_id', user.id).eq('character_id', characterId).maybeSingle();
+
+    if (existing) {
+      await supabase.from('relationships').update({ level: newLevel, interaction_count: newCount, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else {
+      await supabase.from('relationships').insert({ user_id: user.id, character_id: characterId, level: newLevel, interaction_count: newCount });
+    }
   };
 
   const sendMessage = useCallback(async (text?: string) => {
@@ -87,18 +133,25 @@ const ChatChamber = () => {
 
     const personality = [character.personality, character.backstory, character.communication_style].filter(Boolean).join('. ');
 
-    await streamChat({
+    // Try Ollama first, fall back to Cloud AI
+    const ollamaOk = await isOllamaAvailable();
+    const streamFn = ollamaOk ? streamOllamaChat : streamChat;
+
+    await streamFn({
       messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
       characterName: character.name,
       characterPersonality: personality,
       onDelta: upsert,
       onDone: async () => {
         setIsStreaming(false);
-        if (assistantSoFar) await saveMessage('assistant', assistantSoFar);
+        if (assistantSoFar) {
+          await saveMessage('assistant', assistantSoFar);
+          await updateRelationship();
+        }
       },
       onError: (err) => toast.error(err),
     });
-  }, [input, character, isStreaming, messages, user, characterId]);
+  }, [input, character, isStreaming, messages, user, characterId, interactionCount]);
 
   // Voice input
   const toggleVoice = () => {
@@ -106,22 +159,16 @@ const ChatChamber = () => {
       toast.error('Voice not supported in this browser');
       return;
     }
-
     if (isListening) {
       recognitionRef.current?.stop();
       setIsListening(false);
       return;
     }
-
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    recognition.onresult = (e: any) => {
-      const text = e.results[0][0].transcript;
-      setInput(text);
-      setIsListening(false);
-    };
+    recognition.onresult = (e: any) => { setInput(e.results[0][0].transcript); setIsListening(false); };
     recognition.onerror = () => setIsListening(false);
     recognition.onend = () => setIsListening(false);
     recognitionRef.current = recognition;
@@ -129,7 +176,6 @@ const ChatChamber = () => {
     setIsListening(true);
   };
 
-  // Text-to-speech
   const speak = (text: string) => {
     if (!('speechSynthesis' in window)) return;
     const utterance = new SpeechSynthesisUtterance(text);
@@ -143,10 +189,10 @@ const ChatChamber = () => {
   if (!characterId) return <Navigate to="/characters" replace />;
 
   const color = character?.color || '#00f0ff';
+  const rel = relationshipLabels[relationship] || relationshipLabels.stranger;
 
   return (
     <div className="min-h-screen bg-background pt-20 flex flex-col">
-      {/* Character header */}
       {character && (
         <div className="border-b border-border/50 px-6 py-4 flex items-center gap-4 bg-card/50 backdrop-blur-xl">
           <div
@@ -159,14 +205,19 @@ const ChatChamber = () => {
             <h2 className="font-display text-sm font-bold tracking-wider" style={{ color }}>{character.name}</h2>
             <p className="text-xs text-muted-foreground">{character.personality?.slice(0, 60)}...</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-xs text-muted-foreground font-display">ONLINE</span>
+          <div className="ml-auto flex items-center gap-4">
+            <div className="flex items-center gap-1.5" title={`${interactionCount} interactions`}>
+              <rel.icon className="w-3 h-3" style={{ color: rel.color }} />
+              <span className="text-xs font-display tracking-wider" style={{ color: rel.color }}>{rel.label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-xs text-muted-foreground font-display">ONLINE</span>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
         {messages.length === 0 && character && (
           <div className="text-center text-muted-foreground py-20">
@@ -205,7 +256,6 @@ const ChatChamber = () => {
         )}
       </div>
 
-      {/* Input */}
       <div className="border-t border-border/50 p-4 bg-card/50 backdrop-blur-xl">
         <div className="max-w-3xl mx-auto flex gap-2">
           <button
