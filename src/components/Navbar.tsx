@@ -8,6 +8,7 @@ const navItems = [
   { path: '/', label: 'Hub' },
   { path: '/characters', label: 'Galaxy' },
   { path: '/universe-feed', label: 'Feed' },
+  { path: '/story-adventure', label: 'Adventure' },
   { path: '/creation-lab', label: 'Lab' },
   { path: '/dashboard', label: 'Dashboard' },
 ];
