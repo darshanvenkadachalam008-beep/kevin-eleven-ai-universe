@@ -4,23 +4,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { streamChat } from '@/lib/chatStream';
 import { streamOllamaChat, isOllamaAvailable } from '@/lib/ollamaChat';
+import { buildEvolutionPrompt, checkAndStoreEvolution, getMilestoneForCount } from '@/lib/characterEvolution';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles, Dna } from 'lucide-react';
 
-interface ChatMsg {
-  role: 'user' | 'assistant';
-  content: string;
-}
+interface ChatMsg { role: 'user' | 'assistant'; content: string; }
 
 interface CharacterData {
-  id: string;
-  name: string;
-  personality: string;
-  backstory: string | null;
-  communication_style: string | null;
-  avatar: string | null;
-  color: string | null;
+  id: string; name: string; personality: string; backstory: string | null;
+  communication_style: string | null; avatar: string | null; color: string | null;
 }
 
 const relationshipLabels: Record<string, { label: string; icon: typeof Heart; color: string }> = {
@@ -42,6 +35,7 @@ const ChatChamber = () => {
   const [isListening, setIsListening] = useState(false);
   const [relationship, setRelationship] = useState<string>('stranger');
   const [interactionCount, setInteractionCount] = useState(0);
+  const [evolutionStage, setEvolutionStage] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -72,11 +66,12 @@ const ChatChamber = () => {
         if (data) {
           setRelationship(data.level);
           setInteractionCount(data.interaction_count);
+          const m = getMilestoneForCount(data.interaction_count);
+          if (m) setEvolutionStage(m.personalityStage);
         }
       });
   }, [user, characterId]);
 
-  // Auto-scroll
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
@@ -95,7 +90,6 @@ const ChatChamber = () => {
     if (newCount >= 50) newLevel = 'trusted_ally';
     else if (newCount >= 20) newLevel = 'companion';
     else if (newCount >= 5) newLevel = 'friend';
-
     setRelationship(newLevel);
 
     const { data: existing } = await supabase.from('relationships')
@@ -106,6 +100,13 @@ const ChatChamber = () => {
         .eq('id', existing.id);
     } else {
       await supabase.from('relationships').insert({ user_id: user.id, character_id: characterId, level: newLevel, interaction_count: newCount });
+    }
+
+    // Check for evolution milestone
+    const milestone = await checkAndStoreEvolution(user.id, characterId, newCount);
+    if (milestone) {
+      setEvolutionStage(milestone.personalityStage);
+      toast.success(`${character?.name} has evolved! Stage: ${milestone.personalityStage}`, { duration: 4000 });
     }
   };
 
@@ -132,15 +133,15 @@ const ChatChamber = () => {
     };
 
     const personality = [character.personality, character.backstory, character.communication_style].filter(Boolean).join('. ');
+    const evolutionContext = buildEvolutionPrompt(interactionCount);
 
-    // Try Ollama first, fall back to Cloud AI
     const ollamaOk = await isOllamaAvailable();
     const streamFn = ollamaOk ? streamOllamaChat : streamChat;
 
     await streamFn({
       messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
       characterName: character.name,
-      characterPersonality: personality,
+      characterPersonality: personality + evolutionContext,
       onDelta: upsert,
       onDone: async () => {
         setIsStreaming(false);
@@ -159,11 +160,7 @@ const ChatChamber = () => {
       toast.error('Voice not supported in this browser');
       return;
     }
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -178,10 +175,9 @@ const ChatChamber = () => {
 
   const speak = (text: string) => {
     if (!('speechSynthesis' in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
-    utterance.pitch = 1.1;
-    speechSynthesis.speak(utterance);
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9; u.pitch = 1.1;
+    speechSynthesis.speak(u);
   };
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-primary animate-pulse font-display">LOADING...</div></div>;
@@ -194,23 +190,29 @@ const ChatChamber = () => {
   return (
     <div className="min-h-screen bg-background pt-20 flex flex-col">
       {character && (
-        <div className="border-b border-border/50 px-6 py-4 flex items-center gap-4 bg-card/50 backdrop-blur-xl">
+        <div className="border-b border-border/50 px-4 md:px-6 py-3 flex items-center gap-3 bg-card/50 backdrop-blur-xl">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-2xl"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0"
             style={{ background: `linear-gradient(135deg, ${color}20, ${color}05)`, border: `1px solid ${color}40` }}
           >
             {character.avatar}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <h2 className="font-display text-sm font-bold tracking-wider" style={{ color }}>{character.name}</h2>
-            <p className="text-xs text-muted-foreground">{character.personality?.slice(0, 60)}...</p>
+            <p className="text-xs text-muted-foreground truncate">{character.personality?.slice(0, 50)}...</p>
           </div>
-          <div className="ml-auto flex items-center gap-4">
-            <div className="flex items-center gap-1.5" title={`${interactionCount} interactions`}>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {evolutionStage && (
+              <div className="hidden sm:flex items-center gap-1" title="Evolution stage">
+                <Dna className="w-3 h-3 text-secondary" />
+                <span className="text-[10px] font-display tracking-wider text-secondary uppercase">{evolutionStage}</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1" title={`${interactionCount} interactions`}>
               <rel.icon className="w-3 h-3" style={{ color: rel.color }} />
               <span className="text-xs font-display tracking-wider" style={{ color: rel.color }}>{rel.label}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-xs text-muted-foreground font-display">ONLINE</span>
             </div>
@@ -223,17 +225,18 @@ const ChatChamber = () => {
           <div className="text-center text-muted-foreground py-20">
             <div className="text-5xl mb-4">{character.avatar}</div>
             <p className="font-display text-sm tracking-wider" style={{ color }}>Begin your conversation with {character.name}</p>
+            {evolutionStage && (
+              <p className="text-xs text-secondary/60 mt-2 font-display">Evolution: {evolutionStage}</p>
+            )}
           </div>
         )}
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div
-              className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                msg.role === 'user'
-                  ? 'bg-primary/20 border border-primary/30 text-foreground'
-                  : 'bg-secondary/15 border border-secondary/25 text-foreground'
-              }`}
-            >
+            <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+              msg.role === 'user'
+                ? 'bg-primary/20 border border-primary/30 text-foreground'
+                : 'bg-secondary/15 border border-secondary/25 text-foreground'
+            }`}>
               <ReactMarkdown components={{ p: ({ children }) => <p className="m-0">{children}</p> }}>{msg.content}</ReactMarkdown>
               {msg.role === 'assistant' && (
                 <button onClick={() => speak(msg.content)} className="mt-2 text-muted-foreground hover:text-primary transition-colors">
