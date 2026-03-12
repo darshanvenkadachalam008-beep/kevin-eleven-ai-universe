@@ -6,7 +6,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import ConfigGuard from "@/components/ConfigGuard";
-import { lazy, Suspense } from "react";
+import PageTransition from "@/components/PageTransition";
+import { lazy, Suspense, useEffect } from "react";
+import { toast } from "sonner";
 
 const Index = lazy(() => import("./pages/Index"));
 const Characters = lazy(() => import("./pages/Characters"));
@@ -26,6 +28,19 @@ const Loading = () => (
   </div>
 );
 
+const ActivationToast = () => {
+  useEffect(() => {
+    const shown = sessionStorage.getItem('ke-activated');
+    if (!shown) {
+      sessionStorage.setItem('ke-activated', '1');
+      setTimeout(() => {
+        toast.success('KEVEN ELEVEN UNIVERSE platform fully activated.', { duration: 5000 });
+      }, 2000);
+    }
+  }, []);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -35,18 +50,21 @@ const App = () => (
         <BrowserRouter>
           <ConfigGuard />
           <Navbar />
+          <ActivationToast />
           <Suspense fallback={<Loading />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/characters" element={<Characters />} />
-              <Route path="/chat-chamber" element={<ChatChamber />} />
-              <Route path="/creation-lab" element={<CreationLab />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/story-adventure" element={<StoryAdventure />} />
-              <Route path="/universe-feed" element={<UniverseFeed />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <PageTransition>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/characters" element={<Characters />} />
+                <Route path="/chat-chamber" element={<ChatChamber />} />
+                <Route path="/creation-lab" element={<CreationLab />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/story-adventure" element={<StoryAdventure />} />
+                <Route path="/universe-feed" element={<UniverseFeed />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </PageTransition>
           </Suspense>
         </BrowserRouter>
       </TooltipProvider>
