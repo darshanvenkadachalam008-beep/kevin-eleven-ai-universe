@@ -34,7 +34,7 @@ const ActivationToast = () => {
     if (!shown) {
       sessionStorage.setItem('ke-activated', '1');
       setTimeout(() => {
-        toast.success('KEVEN ELEVEN UNIVERSE platform fully activated.', { duration: 5000 });
+        toast.success('KEVEN ELEVEN UNIVERSE systems upgraded successfully.', { duration: 5000 });
       }, 2000);
     }
   }, []);
