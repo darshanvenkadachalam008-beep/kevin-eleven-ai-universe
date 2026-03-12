@@ -110,9 +110,7 @@ function OrbitRing({ radius, color }: { radius: number; color: string }) {
   const geometry = useMemo(() => new THREE.BufferGeometry().setFromPoints(points), [points]);
 
   return (
-    <line geometry={geometry}>
-      <lineBasicMaterial color={color} transparent opacity={0.08} />
-    </line>
+    <primitive object={new THREE.Line(geometry, new THREE.LineBasicMaterial({ color, transparent: true, opacity: 0.08 }))} />
   );
 }
 
