@@ -5,7 +5,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
-import ConfigGuard from "@/components/ConfigGuard";
 import PageTransition from "@/components/PageTransition";
 import { lazy, Suspense, useEffect } from "react";
 import { toast } from "sonner";
@@ -34,7 +33,7 @@ const ActivationToast = () => {
     if (!shown) {
       sessionStorage.setItem('ke-activated', '1');
       setTimeout(() => {
-        toast.success('KEVEN ELEVEN UNIVERSE systems upgraded successfully.', { duration: 5000 });
+        toast.success('KEVEN ELEVEN UNIVERSE intelligent systems activated.', { duration: 5000 });
       }, 2000);
     }
   }, []);
@@ -48,7 +47,6 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <ConfigGuard />
           <Navbar />
           <ActivationToast />
           <Suspense fallback={<Loading />}>

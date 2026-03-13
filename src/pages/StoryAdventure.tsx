@@ -2,17 +2,17 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { streamOllamaChat, isOllamaAvailable } from '@/lib/ollamaChat';
 import { streamChat } from '@/lib/chatStream';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { Sword, BookOpen, Compass, Sparkles } from 'lucide-react';
+import { Sword, BookOpen, Compass, Sparkles, Skull } from 'lucide-react';
 
 const genres = [
   { id: 'space_mission', label: 'Space Mission', icon: Compass, description: 'Explore unknown galaxies and encounter alien civilizations' },
   { id: 'detective', label: 'Detective Mystery', icon: BookOpen, description: 'Solve crimes and unravel conspiracies' },
   { id: 'fantasy_quest', label: 'Fantasy Quest', icon: Sword, description: 'Embark on magical adventures in enchanted realms' },
   { id: 'survival', label: 'Survival', icon: Sparkles, description: 'Survive against all odds in hostile environments' },
+  { id: 'cosmic_war', label: 'Cosmic War', icon: Skull, description: 'Command fleets, defend planets, and wage galactic warfare' },
 ];
 
 interface StoryMsg {
@@ -62,8 +62,7 @@ const StoryAdventure = () => {
     setIsStreaming(true);
     let response = '';
 
-    const streamFn = await getStreamFunction();
-    await streamFn({
+    await streamChat({
       messages: [{ role: 'user', content: storyPrompt }],
       characterName: character.name,
       characterPersonality: personality,
@@ -93,8 +92,7 @@ const StoryAdventure = () => {
 
     const allMsgs = [...updated.map(m => ({ role: m.role, content: m.content })), { role: 'user' as const, content: continuePrompt }];
 
-    const streamFn = await getStreamFunction();
-    await streamFn({
+    await streamChat({
       messages: allMsgs,
       characterName: character.name,
       characterPersonality: personality,
@@ -125,7 +123,6 @@ const StoryAdventure = () => {
 
   const color = character?.color || '#00f0ff';
 
-  // Genre selection
   if (!genre) {
     return (
       <div className="min-h-screen bg-background pt-24 pb-12 px-4">
@@ -210,10 +207,5 @@ const StoryAdventure = () => {
     </div>
   );
 };
-
-async function getStreamFunction() {
-  const ollamaOk = await isOllamaAvailable();
-  return ollamaOk ? streamOllamaChat : streamChat;
-}
 
 export default StoryAdventure;
