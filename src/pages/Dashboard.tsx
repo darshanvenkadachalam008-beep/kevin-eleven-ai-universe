@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { Navigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { LogOut, MessageSquare, Trash2, Heart, Shield, Users, Sparkles, Sword } from 'lucide-react';
+import { LogOut, MessageSquare, Trash2, Heart, Shield, Users, Sparkles, Sword, Camera, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 
 const relationshipIcons: Record<string, { label: string; icon: typeof Heart; color: string }> = {
@@ -20,11 +20,12 @@ const Dashboard = () => {
   const [relationships, setRelationships] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<any[]>([]);
   const [storySessions, setStorySessions] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!user) return;
     
-    // Load all dashboard data in parallel
     supabase.from('profiles').select('*').eq('user_id', user.id).single()
       .then(({ data }) => setProfile(data));
 
@@ -56,6 +57,33 @@ const Dashboard = () => {
       .then(({ data }) => setStorySessions(data || []));
   }, [user]);
 
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('user_profiles')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error('Upload failed');
+      setUploading(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('user_profiles').getPublicUrl(path);
+    const photoUrl = urlData.publicUrl + '?t=' + Date.now();
+
+    await supabase.from('profiles').update({ profile_photo_url: photoUrl }).eq('user_id', user.id);
+    setProfile((prev: any) => ({ ...prev, profile_photo_url: photoUrl }));
+    toast.success('Profile photo updated!');
+    setUploading(false);
+  };
+
   const deleteCharacter = async (id: string, name: string) => {
     if (!confirm(`Delete ${name}?`)) return;
     const { error } = await supabase.from('characters').delete().eq('id', id);
@@ -68,6 +96,8 @@ const Dashboard = () => {
 
   if (loading) return <div className="min-h-screen bg-background flex items-center justify-center"><div className="text-primary animate-pulse font-display">LOADING...</div></div>;
   if (!user) return <Navigate to="/auth" replace />;
+
+  const avatarUrl = profile?.profile_photo_url || user.user_metadata?.avatar_url;
 
   return (
     <div className="min-h-screen bg-background pt-24 pb-12 px-4">
@@ -84,10 +114,26 @@ const Dashboard = () => {
         <div className="holo-card rounded-2xl p-6">
           <h2 className="font-display text-sm text-muted-foreground tracking-wider mb-4">PROFILE</h2>
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-2xl">👤</div>
+            <div className="relative group">
+              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-2xl overflow-hidden">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                ) : '👤'}
+              </div>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute inset-0 rounded-full bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+              >
+                <Camera className="w-5 h-5 text-white" />
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+            </div>
             <div>
-              <p className="font-display text-primary font-bold tracking-wider">{profile?.username || 'Commander'}</p>
+              <p className="font-display text-primary font-bold tracking-wider">
+                {profile?.username || user.user_metadata?.full_name || 'Commander'}
+              </p>
               <p className="text-xs text-muted-foreground">{user.email}</p>
+              {uploading && <p className="text-xs text-primary animate-pulse">Uploading...</p>}
             </div>
           </div>
         </div>

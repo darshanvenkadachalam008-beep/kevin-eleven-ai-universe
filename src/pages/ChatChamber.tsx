@@ -3,11 +3,10 @@ import { useSearchParams, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { streamChat } from '@/lib/chatStream';
-import { streamOllamaChat, isOllamaAvailable } from '@/lib/ollamaChat';
 import { buildEvolutionPrompt, checkAndStoreEvolution, getMilestoneForCount } from '@/lib/characterEvolution';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles, Dna } from 'lucide-react';
+import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles, Dna, History } from 'lucide-react';
 
 interface ChatMsg { role: 'user' | 'assistant'; content: string; }
 
@@ -36,6 +35,8 @@ const ChatChamber = () => {
   const [relationship, setRelationship] = useState<string>('stranger');
   const [interactionCount, setInteractionCount] = useState(0);
   const [evolutionStage, setEvolutionStage] = useState<string | null>(null);
+  const [showEvolution, setShowEvolution] = useState(false);
+  const [evolutionHistory, setEvolutionHistory] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -72,6 +73,15 @@ const ChatChamber = () => {
       });
   }, [user, characterId]);
 
+  // Load evolution history
+  useEffect(() => {
+    if (!user || !characterId) return;
+    supabase.from('character_memory').select('*')
+      .eq('user_id', user.id).eq('character_id', characterId)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setEvolutionHistory(data || []));
+  }, [user, characterId, interactionCount]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages]);
@@ -102,7 +112,6 @@ const ChatChamber = () => {
       await supabase.from('relationships').insert({ user_id: user.id, character_id: characterId, level: newLevel, interaction_count: newCount });
     }
 
-    // Check for evolution milestone
     const milestone = await checkAndStoreEvolution(user.id, characterId, newCount);
     if (milestone) {
       setEvolutionStage(milestone.personalityStage);
@@ -135,10 +144,7 @@ const ChatChamber = () => {
     const personality = [character.personality, character.backstory, character.communication_style].filter(Boolean).join('. ');
     const evolutionContext = buildEvolutionPrompt(interactionCount);
 
-    const ollamaOk = await isOllamaAvailable();
-    const streamFn = ollamaOk ? streamOllamaChat : streamChat;
-
-    await streamFn({
+    await streamChat({
       messages: [...messages, userMsg].map(m => ({ role: m.role, content: m.content })),
       characterName: character.name,
       characterPersonality: personality + evolutionContext,
@@ -212,6 +218,9 @@ const ChatChamber = () => {
               <rel.icon className="w-3 h-3" style={{ color: rel.color }} />
               <span className="text-xs font-display tracking-wider" style={{ color: rel.color }}>{rel.label}</span>
             </div>
+            <button onClick={() => setShowEvolution(!showEvolution)} className="p-1 rounded text-muted-foreground hover:text-primary transition-colors" title="Evolution History">
+              <History className="w-4 h-4" />
+            </button>
             <div className="hidden sm:flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               <span className="text-xs text-muted-foreground font-display">ONLINE</span>
@@ -220,69 +229,108 @@ const ChatChamber = () => {
         </div>
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {messages.length === 0 && character && (
-          <div className="text-center text-muted-foreground py-20">
-            <div className="text-5xl mb-4">{character.avatar}</div>
-            <p className="font-display text-sm tracking-wider" style={{ color }}>Begin your conversation with {character.name}</p>
-            {evolutionStage && (
-              <p className="text-xs text-secondary/60 mt-2 font-display">Evolution: {evolutionStage}</p>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Chat area */}
+        <div className="flex-1 flex flex-col">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
+            {messages.length === 0 && character && (
+              <div className="text-center text-muted-foreground py-20">
+                <div className="text-5xl mb-4">{character.avatar}</div>
+                <p className="font-display text-sm tracking-wider" style={{ color }}>Begin your conversation with {character.name}</p>
+                {evolutionStage && (
+                  <p className="text-xs text-secondary/60 mt-2 font-display">Evolution: {evolutionStage}</p>
+                )}
+              </div>
+            )}
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  msg.role === 'user'
+                    ? 'bg-primary/20 border border-primary/30 text-foreground'
+                    : 'bg-secondary/15 border border-secondary/25 text-foreground'
+                }`}>
+                  <ReactMarkdown components={{ p: ({ children }) => <p className="m-0">{children}</p> }}>{msg.content}</ReactMarkdown>
+                  {msg.role === 'assistant' && (
+                    <button onClick={() => speak(msg.content)} className="mt-2 text-muted-foreground hover:text-primary transition-colors">
+                      <Volume2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
+              <div className="flex justify-start">
+                <div className="bg-secondary/15 border border-secondary/25 rounded-2xl px-4 py-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
-        )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === 'user'
-                ? 'bg-primary/20 border border-primary/30 text-foreground'
-                : 'bg-secondary/15 border border-secondary/25 text-foreground'
-            }`}>
-              <ReactMarkdown components={{ p: ({ children }) => <p className="m-0">{children}</p> }}>{msg.content}</ReactMarkdown>
-              {msg.role === 'assistant' && (
-                <button onClick={() => speak(msg.content)} className="mt-2 text-muted-foreground hover:text-primary transition-colors">
-                  <Volume2 className="w-3 h-3" />
-                </button>
+
+          <div className="border-t border-border/50 p-4 bg-card/50 backdrop-blur-xl">
+            <div className="max-w-3xl mx-auto flex gap-2">
+              <button
+                onClick={toggleVoice}
+                className={`p-3 rounded-xl border transition-all ${isListening ? 'border-primary bg-primary/20 text-primary' : 'border-border text-muted-foreground hover:text-primary hover:border-primary/50'}`}
+              >
+                {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              </button>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                placeholder={`Message ${character?.name || ''}...`}
+                className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border text-foreground focus:border-primary focus:outline-none transition-colors text-sm"
+                disabled={isStreaming}
+              />
+              <button
+                onClick={() => sendMessage()}
+                disabled={isStreaming || !input.trim()}
+                className="holo-btn p-3 rounded-xl disabled:opacity-50"
+              >
+                <Send className="w-5 h-5 relative z-10" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Evolution History Sidebar */}
+        {showEvolution && (
+          <div className="w-72 border-l border-border/50 bg-card/50 backdrop-blur-xl overflow-y-auto p-4 hidden sm:block">
+            <h3 className="font-display text-xs font-bold tracking-wider text-primary mb-4">EVOLUTION HISTORY</h3>
+            <div className="space-y-3">
+              <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                <p className="text-[10px] font-display tracking-wider text-muted-foreground">INTERACTIONS</p>
+                <p className="text-lg font-display font-bold text-primary">{interactionCount}</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                <p className="text-[10px] font-display tracking-wider text-muted-foreground">RELATIONSHIP</p>
+                <p className="text-sm font-display font-bold" style={{ color: rel.color }}>{rel.label}</p>
+              </div>
+              {evolutionStage && (
+                <div className="p-3 rounded-lg bg-muted/50 border border-border/50">
+                  <p className="text-[10px] font-display tracking-wider text-muted-foreground">STAGE</p>
+                  <p className="text-sm font-display font-bold text-secondary uppercase">{evolutionStage}</p>
+                </div>
+              )}
+              {evolutionHistory.length > 0 && (
+                <>
+                  <p className="text-[10px] font-display tracking-wider text-muted-foreground mt-4">MEMORY LOG</p>
+                  {evolutionHistory.map(mem => (
+                    <div key={mem.id} className="p-2 rounded-lg bg-muted/30 border border-border/30">
+                      <p className="text-[10px] font-display tracking-wider text-primary/70">{mem.memory_key}</p>
+                      <p className="text-xs text-foreground/70">{mem.memory_value}</p>
+                    </div>
+                  ))}
+                </>
               )}
             </div>
           </div>
-        ))}
-        {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
-          <div className="flex justify-start">
-            <div className="bg-secondary/15 border border-secondary/25 rounded-2xl px-4 py-3">
-              <div className="flex gap-1">
-                <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 rounded-full bg-secondary animate-bounce" style={{ animationDelay: '300ms' }} />
-              </div>
-            </div>
-          </div>
         )}
-      </div>
-
-      <div className="border-t border-border/50 p-4 bg-card/50 backdrop-blur-xl">
-        <div className="max-w-3xl mx-auto flex gap-2">
-          <button
-            onClick={toggleVoice}
-            className={`p-3 rounded-xl border transition-all ${isListening ? 'border-primary bg-primary/20 text-primary' : 'border-border text-muted-foreground hover:text-primary hover:border-primary/50'}`}
-          >
-            {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-          </button>
-          <input
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-            placeholder={`Message ${character?.name || ''}...`}
-            className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border text-foreground focus:border-primary focus:outline-none transition-colors text-sm"
-            disabled={isStreaming}
-          />
-          <button
-            onClick={() => sendMessage()}
-            disabled={isStreaming || !input.trim()}
-            className="holo-btn p-3 rounded-xl disabled:opacity-50"
-          >
-            <Send className="w-5 h-5 relative z-10" />
-          </button>
-        </div>
       </div>
     </div>
   );

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { Settings, Menu, X } from 'lucide-react';
-import ConfigModal from './ConfigModal';
+import { Menu, X } from 'lucide-react';
 
 const navItems = [
   { path: '/', label: 'Hub' },
@@ -16,7 +15,6 @@ const navItems = [
 const Navbar = () => {
   const location = useLocation();
   const { user } = useAuth();
-  const [showConfig, setShowConfig] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -46,16 +44,15 @@ const Navbar = () => {
               {item.label}
             </Link>
           ))}
-          <button onClick={() => setShowConfig(true)} className="p-2 rounded-lg text-muted-foreground hover:text-primary transition-colors ml-1">
-            <Settings className="w-4 h-4" />
-          </button>
           {!user ? (
             <Link to="/auth" className="holo-btn px-4 py-2 rounded-lg text-xs font-display tracking-wider ml-1">
               <span className="relative z-10">LOGIN</span>
             </Link>
           ) : (
-            <Link to="/dashboard" className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs ml-1">
-              👤
+            <Link to="/dashboard" className="w-8 h-8 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-xs ml-1 overflow-hidden">
+              {user.user_metadata?.avatar_url ? (
+                <img src={user.user_metadata.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+              ) : '👤'}
             </Link>
           )}
         </div>
@@ -84,9 +81,6 @@ const Navbar = () => {
                 {item.label}
               </Link>
             ))}
-            <button onClick={() => { setShowConfig(true); setMobileOpen(false); }} className="w-full text-center px-4 py-3 rounded-lg font-display text-sm tracking-wider text-muted-foreground">
-              ⚙ SETTINGS
-            </button>
             {!user ? (
               <Link to="/auth" onClick={() => setMobileOpen(false)} className="holo-btn w-full text-center px-4 py-3 rounded-lg text-sm font-display tracking-wider mt-2">
                 <span className="relative z-10">LOGIN</span>
@@ -99,8 +93,6 @@ const Navbar = () => {
           </div>
         </div>
       )}
-
-      <ConfigModal open={showConfig} onClose={() => setShowConfig(false)} />
     </>
   );
 };
