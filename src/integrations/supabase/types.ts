@@ -200,6 +200,47 @@ export type Database = {
           },
         ]
       }
+      galaxy_territories: {
+        Row: {
+          controller_character_id: string | null
+          controller_user_id: string | null
+          created_at: string
+          defense_level: number
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          controller_character_id?: string | null
+          controller_user_id?: string | null
+          created_at?: string
+          defense_level?: number
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          controller_character_id?: string | null
+          controller_user_id?: string | null
+          created_at?: string
+          defense_level?: number
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "galaxy_territories_controller_character_id_fkey"
+            columns: ["controller_character_id"]
+            isOneToOne: false
+            referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           character_id: string
@@ -240,6 +281,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           id: string
+          profile_photo_url: string | null
           updated_at: string
           user_id: string
           username: string | null
@@ -248,6 +290,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
+          profile_photo_url?: string | null
           updated_at?: string
           user_id: string
           username?: string | null
@@ -256,6 +299,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
+          profile_photo_url?: string | null
           updated_at?: string
           user_id?: string
           username?: string | null
@@ -372,6 +416,50 @@ export type Database = {
             columns: ["character_id"]
             isOneToOne: false
             referencedRelation: "characters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universe_events: {
+        Row: {
+          affected_territory_id: string | null
+          created_at: string
+          description: string
+          event_type: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          metadata: Json | null
+          title: string
+        }
+        Insert: {
+          affected_territory_id?: string | null
+          created_at?: string
+          description: string
+          event_type: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          title: string
+        }
+        Update: {
+          affected_territory_id?: string | null
+          created_at?: string
+          description?: string
+          event_type?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "universe_events_affected_territory_id_fkey"
+            columns: ["affected_territory_id"]
+            isOneToOne: false
+            referencedRelation: "galaxy_territories"
             referencedColumns: ["id"]
           },
         ]
