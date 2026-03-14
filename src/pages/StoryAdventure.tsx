@@ -59,6 +59,7 @@ const StoryAdventure = () => {
     }).select('id').single();
 
     if (session) setSessionId(session.id);
+    if (user) addXp(user.id, 'story_start');
 
     const personality = [character.personality, character.backstory].filter(Boolean).join('. ');
     const storyPrompt = `Start an interactive ${selectedGenre.replace('_', ' ')} story adventure. Set the scene vividly in 2-3 paragraphs. At the end, present exactly 3 choices for the player, formatted as:\n\n1. [choice]\n2. [choice]\n3. [choice]\n\nMake it immersive and dramatic.`;
