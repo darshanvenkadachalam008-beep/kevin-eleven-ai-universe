@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { streamChat } from '@/lib/chatStream';
 import { buildEvolutionPrompt, checkAndStoreEvolution, getMilestoneForCount } from '@/lib/characterEvolution';
+import { addXp } from '@/lib/xpSystem';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { Send, Mic, MicOff, Volume2, Heart, Shield, Users, Sparkles, Dna, History } from 'lucide-react';
