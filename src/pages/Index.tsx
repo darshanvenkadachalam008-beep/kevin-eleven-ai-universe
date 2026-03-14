@@ -1,50 +1,77 @@
-import HeroScene from '@/components/HeroScene';
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import gsap from 'gsap';
+
+const AnimeHero = lazy(() => import('@/components/AnimeHero'));
 
 const Index = () => {
   const heroRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<HTMLDivElement>(null);
   const [characters, setCharacters] = useState<any[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   useEffect(() => {
+    // Cinematic entrance
     if (heroRef.current) {
-      heroRef.current.style.opacity = '1';
-      heroRef.current.style.transform = 'translateY(0)';
+      gsap.fromTo(heroRef.current,
+        { opacity: 0, y: 40, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 1.2, ease: 'power3.out', delay: 0.3 }
+      );
+    }
+    if (buttonsRef.current) {
+      gsap.fromTo(buttonsRef.current.children,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6, stagger: 0.15, ease: 'power2.out', delay: 1 }
+      );
     }
     supabase.from('characters').select('id, name, personality, avatar, color')
       .eq('is_default', true).order('created_at')
       .then(({ data }) => setCharacters(data || []));
   }, []);
 
+  const buttons = [
+    { to: '/characters', label: 'Enter Universe', icon: '🌌' },
+    { to: '/characters', label: 'Explore Galaxy', icon: '🪐' },
+    { to: '/story-adventure', label: 'Story Adventure', icon: '⚔' },
+    { to: '/creation-lab', label: 'Create Character', icon: '✨' },
+  ];
+
   return (
     <div className="min-h-screen bg-background relative">
+      {/* Anime Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        <HeroScene />
-        <div
-          ref={heroRef}
-          className="relative z-10 text-center px-4 transition-all duration-1000 ease-out"
-          style={{ opacity: 0, transform: 'translateY(30px)' }}
-        >
+        <Suspense fallback={null}>
+          <AnimeHero />
+        </Suspense>
+
+        <div ref={heroRef} className="relative z-10 text-center px-4" style={{ opacity: 0 }}>
           <h1 className="font-display text-7xl md:text-9xl font-black tracking-[0.2em] text-primary neon-text mb-2">
             KEVIN
           </h1>
-          <div className="font-display text-xl md:text-2xl tracking-[0.5em] text-secondary neon-text-purple mb-8 uppercase">
+          <div className="font-display text-xl md:text-2xl tracking-[0.5em] text-secondary neon-text-purple mb-4 uppercase">
             Eleven
           </div>
           <p className="text-lg md:text-xl text-foreground/70 mb-10 max-w-lg mx-auto font-body leading-relaxed">
             Enter the AI Character Universe
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/characters" className="holo-btn px-8 py-3 rounded-lg text-sm inline-block">
-              <span className="relative z-10">Explore Characters</span>
-            </Link>
-            <Link to="/creation-lab" className="holo-btn px-8 py-3 rounded-lg text-sm inline-block" style={{ borderColor: 'hsl(262 83% 58% / 0.4)', color: 'hsl(262 83% 58%)' }}>
-              <span className="relative z-10">Create Character</span>
-            </Link>
+
+          <div ref={buttonsRef} className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 justify-center max-w-xl mx-auto">
+            {buttons.map((btn) => (
+              <Link
+                key={btn.label}
+                to={btn.to}
+                className="holo-btn px-6 py-3 rounded-xl text-xs inline-flex items-center gap-2 justify-center group transition-transform hover:scale-105 hover:-translate-y-1"
+                style={{ perspective: '600px' }}
+              >
+                <span className="text-base relative z-10 group-hover:animate-pulse">{btn.icon}</span>
+                <span className="relative z-10">{btn.label}</span>
+              </Link>
+            ))}
           </div>
         </div>
+
+        {/* Scroll indicator */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 animate-bounce">
           <div className="w-6 h-10 rounded-full border-2 border-primary/30 flex items-start justify-center p-1">
             <div className="w-1.5 h-3 rounded-full bg-primary/50 animate-pulse-glow" />
@@ -52,6 +79,7 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Characters Section */}
       <section className="relative z-10 py-20 px-4">
         <div className="max-w-6xl mx-auto">
           <h2 className="font-display text-3xl md:text-4xl font-bold text-center text-primary neon-text mb-3 tracking-wider">
