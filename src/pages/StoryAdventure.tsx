@@ -5,7 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { streamChat } from '@/lib/chatStream';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
-import { Sword, BookOpen, Compass, Sparkles, Skull } from 'lucide-react';
+import { Sword, BookOpen, Compass, Sparkles, Skull, Users } from 'lucide-react';
+import { addXp } from '@/lib/xpSystem';
 
 const genres = [
   { id: 'space_mission', label: 'Space Mission', icon: Compass, description: 'Explore unknown galaxies and encounter alien civilizations' },
@@ -13,6 +14,9 @@ const genres = [
   { id: 'fantasy_quest', label: 'Fantasy Quest', icon: Sword, description: 'Embark on magical adventures in enchanted realms' },
   { id: 'survival', label: 'Survival', icon: Sparkles, description: 'Survive against all odds in hostile environments' },
   { id: 'cosmic_war', label: 'Cosmic War', icon: Skull, description: 'Command fleets, defend planets, and wage galactic warfare' },
+  { id: 'alien_diplomacy', label: 'Alien Diplomacy', icon: Users, description: 'Negotiate peace between warring alien civilizations' },
+  { id: 'galactic_exploration', label: 'Galactic Exploration', icon: Compass, description: 'Chart unknown regions and discover new worlds' },
+  { id: 'mystery_dimension', label: 'Mystery Dimension', icon: BookOpen, description: 'Unravel interdimensional anomalies and cosmic riddles' },
 ];
 
 interface StoryMsg {
