@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Wand2, Save } from 'lucide-react';
+import { addXp } from '@/lib/xpSystem';
 
 const avatarOptions = ['👽', '🤖', '🏴‍☠️', '🦾', '🧙', '⏳', '🧛', '🦊', '🐉', '👾', '🎭', '🌌'];
 const colorOptions = ['#00f0ff', '#ff00ff', '#ff6600', '#8b5cf6', '#00ff88', '#ffcc00', '#ff3366', '#00ccff'];
