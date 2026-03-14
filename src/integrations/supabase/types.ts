@@ -279,7 +279,10 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
           created_at: string
+          display_name: string | null
+          faction: string | null
           id: string
           profile_photo_url: string | null
           updated_at: string
@@ -288,7 +291,10 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          faction?: string | null
           id?: string
           profile_photo_url?: string | null
           updated_at?: string
@@ -297,7 +303,10 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          faction?: string | null
           id?: string
           profile_photo_url?: string | null
           updated_at?: string
@@ -463,6 +472,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_levels: {
+        Row: {
+          created_at: string
+          faction: string | null
+          id: string
+          level: number
+          rank: string
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          faction?: string | null
+          id?: string
+          level?: number
+          rank?: string
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          faction?: string | null
+          id?: string
+          level?: number
+          rank?: string
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
       }
     }
     Views: {
