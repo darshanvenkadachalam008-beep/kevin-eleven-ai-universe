@@ -155,6 +155,7 @@ const ChatChamber = () => {
         if (assistantSoFar) {
           await saveMessage('assistant', assistantSoFar);
           await updateRelationship();
+          if (user) addXp(user.id, 'chat_message');
         }
       },
       onError: (err) => toast.error(err),

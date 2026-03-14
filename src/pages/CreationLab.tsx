@@ -61,6 +61,7 @@ const CreationLab = () => {
       toast.error('Failed to save character.');
     } else {
       toast.success(`${name} has been created!`);
+      addXp(user.id, 'create_character');
       navigate('/characters');
     }
   };

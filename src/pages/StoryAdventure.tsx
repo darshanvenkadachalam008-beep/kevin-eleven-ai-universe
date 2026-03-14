@@ -85,6 +85,7 @@ const StoryAdventure = () => {
 
   const makeChoice = useCallback(async (choice: string) => {
     if (!character || isStreaming) return;
+    if (user) addXp(user.id, 'story_choice');
     const userMsg: StoryMsg = { role: 'user', content: choice };
     const updated = [...messages, userMsg];
     setMessages(updated);
